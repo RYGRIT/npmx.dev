@@ -94,6 +94,11 @@ const locales: (LocaleObjectData | (Omit<LocaleObjectData, 'code'> & { code: str
       return { zero: 0, one: 1, two: 2, few: 3, many: 4, other: 5 }[name]
     },
   },
+  {
+    code: 'az-AZ',
+    file: 'az.json',
+    name: 'Azərbaycanca',
+  },
   /*{
     code: 'ckb',
     file: 'ckb.json',
