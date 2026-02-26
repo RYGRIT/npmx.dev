@@ -97,10 +97,31 @@ export function hasSearchOperators(parsed: ParsedSearchOperators): boolean {
 }
 
 /**
- * Escape special regex characters in a string
+ * Remove a keyword from a search query string.
+ * Handles kw:xxx and keyword:xxx formats, including comma-separated values.
  */
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+export function removeKeywordFromQuery(query: string, keyword: string): string {
+  const operatorRegex = /\b((?:kw|keyword):)(\S+)/gi
+  const lowerKeyword = keyword.toLowerCase()
+
+  let result = query.replace(operatorRegex, (match, prefix: string, value: string) => {
+    const values = value.split(',').filter(Boolean)
+    const filtered = values.filter(v => v.toLowerCase() !== lowerKeyword)
+
+    if (filtered.length === 0) {
+      // All values removed — drop the entire operator
+      return ''
+    }
+    if (filtered.length === values.length) {
+      // Nothing was removed — keep original
+      return match
+    }
+    return `${prefix}${filtered.join(',')}`
+  })
+
+  // Clean up double spaces and trim
+  result = result.replace(/\s+/g, ' ').trim()
+  return result
 }
 
 interface UseStructuredFiltersOptions {
@@ -432,7 +453,9 @@ export function useStructuredFilters(options: UseStructuredFiltersOptions) {
   }
 
   function addKeyword(keyword: string) {
-    if (!filters.value.keywords.includes(keyword)) {
+    const lowerKeyword = keyword.toLowerCase()
+    const alreadyExists = filters.value.keywords.some(k => k.toLowerCase() === lowerKeyword)
+    if (!alreadyExists) {
       filters.value.keywords = [...filters.value.keywords, keyword]
       const newQ = searchQuery.value
         ? `${searchQuery.value.trim()} keyword:${keyword}`
@@ -444,45 +467,21 @@ export function useStructuredFilters(options: UseStructuredFiltersOptions) {
   }
 
   function removeKeyword(keyword: string) {
-    filters.value.keywords = filters.value.keywords.filter(k => k !== keyword)
+    const lowerKeyword = keyword.toLowerCase()
+    filters.value.keywords = filters.value.keywords.filter(k => k.toLowerCase() !== lowerKeyword)
 
-    // Need to handle both kw:xxx and keyword:xxx formats
-    // Also handle comma-separated values like kw:foo,bar,baz
-    let newQ = searchQuery.value
-
-    // First, try to remove standalone keyword:xxx or kw:xxx
-    // Match: (kw|keyword):value followed by space or end of string
-    newQ = newQ.replace(new RegExp(`\\b(?:kw|keyword):${escapeRegExp(keyword)}(?=\\s|$)`, 'gi'), '')
-
-    // Handle comma-separated values: remove the keyword from within a list
-    // e.g., "kw:foo,bar,baz" should become "kw:foo,baz" if removing "bar"
-    newQ = newQ.replace(
-      new RegExp(
-        `\\b((?:kw|keyword):)([^\\s]*,)?${escapeRegExp(keyword)}(,[^\\s]*)?(?=\\s|$)`,
-        'gi',
-      ),
-      (match, prefix, before, after) => {
-        const beforePart = before?.replace(/,$/, '') ?? ''
-        const afterPart = after?.replace(/^,/, '') ?? ''
-        if (!beforePart && !afterPart) {
-          // This was the only keyword in the operator
-          return ''
-        }
-        // Reconstruct with remaining keywords
-        const separator = beforePart && afterPart ? ',' : ''
-        return `${prefix}${beforePart}${separator}${afterPart}`
-      },
-    )
-
-    // Clean up any double spaces and trim
-    newQ = newQ.replace(/\s+/g, ' ').trim()
+    // Remove the keyword from the search query string.
+    // Handles both kw:xxx and keyword:xxx formats, including comma-separated values.
+    const newQ = removeKeywordFromQuery(searchQuery.value, keyword)
 
     router.replace({ query: { ...route.query, q: newQ || undefined } })
     if (searchQueryModel) searchQueryModel.value = newQ
   }
 
   function toggleKeyword(keyword: string) {
-    if (filters.value.keywords.includes(keyword)) {
+    const lowerKeyword = keyword.toLowerCase()
+    const exists = filters.value.keywords.some(k => k.toLowerCase() === lowerKeyword)
+    if (exists) {
       removeKeyword(keyword)
     } else {
       addKeyword(keyword)
