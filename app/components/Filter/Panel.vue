@@ -32,6 +32,11 @@ const { t } = useI18n()
 const isExpanded = shallowRef(false)
 const showAllKeywords = shallowRef(false)
 
+const filterText = computed({
+  get: () => props.filters.text,
+  set: value => emit('update:text', value),
+})
+
 const displayedKeywords = computed(() => {
   const keywords = props.availableKeywords ?? []
   return showAllKeywords.value ? keywords : keywords.slice(0, 20)
@@ -130,11 +135,6 @@ function getSecurityLabelKey(value: SecurityFilter): string {
   return securityLabelKeys.value[value]
 }
 
-function handleTextInput(event: Event) {
-  const target = event.target as HTMLInputElement
-  emit('update:text', target.value)
-}
-
 // Compact summary of active filters for collapsed header using operator syntax
 const filterSummary = computed(() => {
   const parts: string[] = []
@@ -193,14 +193,14 @@ const hasActiveFilters = computed(() => !!filterSummary.value)
       @click="isExpanded = !isExpanded"
     >
       <span class="flex items-center gap-2 text-sm font-mono text-fg shrink-0">
-        <span class="i-carbon-filter w-4 h-4" aria-hidden="true" />
+        <span class="i-lucide:funnel w-4 h-4" aria-hidden="true" />
         {{ $t('filters.title') }}
       </span>
       <span v-if="!isExpanded && hasActiveFilters" class="text-xs font-mono text-fg-muted truncate">
         {{ filterSummary }}
       </span>
       <span
-        class="i-carbon-chevron-down w-4 h-4 text-fg-subtle transition-transform duration-200 shrink-0 ms-auto"
+        class="i-lucide:chevron-down w-4 h-4 text-fg-subtle transition-transform duration-200 shrink-0 ms-auto"
         :class="{ 'rotate-180': isExpanded }"
         aria-hidden="true"
       />
@@ -239,14 +239,15 @@ const hasActiveFilters = computed(() => !!filterSummary.value)
               </button>
             </div>
           </div>
-          <input
+          <InputBase
             id="filter-search"
             type="text"
-            :value="filters.text"
+            v-model="filterText"
             :placeholder="searchPlaceholder"
             autocomplete="off"
-            class="w-full bg-bg-subtle border border-border rounded-md px-4 py-3 font-mono text-sm text-fg placeholder:text-fg-subtle transition-[border-color,outline-color] duration-300 hover:border-fg-subtle outline-2 outline-transparent focus:border-accent focus-visible:(outline-2 outline-accent/70)"
-            @input="handleTextInput"
+            class="w-full min-w-25"
+            size="medium"
+            no-correct
           />
         </div>
 

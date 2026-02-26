@@ -3,7 +3,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import type { VueWrapper } from '@vue/test-utils'
 import 'axe-core'
 import type { AxeResults, RunOptions } from 'axe-core'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 
 // axe-core is a UMD module that exposes itself as window.axe in the browser
 declare const axe: {
@@ -48,6 +48,35 @@ async function runAxe(wrapper: VueWrapper): Promise<AxeResults> {
   return axe.run(container, axeRunOptions)
 }
 
+// --- Console warning assertion --------------------------------------------------
+// Fail any test that emits unexpected console.warn calls. This catches issues
+// like missing/invalid props that would otherwise silently pass.
+let warnSpy: MockInstance
+
+// Patterns that are expected and safe to ignore in the test environment.
+const allowedWarnings: RegExp[] = [
+  // vue-i18n logs this when <i18n-t> is used outside a component-scoped i18n;
+  // it falls back to the global scope and still renders correctly.
+  /\[intlify\] Not found parent scope/,
+]
+
+beforeEach(() => {
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+})
+
+afterEach(() => {
+  // Collect unexpected warnings
+  const unexpected = warnSpy.mock.calls.filter(
+    args => !allowedWarnings.some(re => re.test(String(args[0]))),
+  )
+  warnSpy.mockRestore()
+
+  if (unexpected.length > 0) {
+    const msgs = unexpected.map(args => args.map(String).join(' ')).join('\n')
+    throw new Error(`Test emitted unexpected console.warn:\n${msgs}`)
+  }
+})
+
 // Clean up mounted containers after each test
 afterEach(() => {
   for (const container of mountedContainers) {
@@ -65,9 +94,15 @@ vi.mock('vue-data-ui/vue-ui-xy', () => {
     VueUiXy: defineComponent({
       name: 'VueUiXy',
       inheritAttrs: false,
-      setup(_, { attrs, slots }) {
-        return () =>
-          h('div', { ...attrs, 'data-test-id': 'vue-ui-xy-stub' }, slots.default?.() ?? [])
+      // Declare the props VueUiXy receives so they don't fall through to attrs.
+      // Spreading `dataset` onto a DOM element triggers a Vue warning because
+      // HTMLElement.dataset is a read-only getter.
+      props: {
+        dataset: { type: Array, default: () => [] },
+        config: { type: Object, default: () => ({}) },
+      },
+      setup(_, { slots }) {
+        return () => h('div', { 'data-test-id': 'vue-ui-xy-stub' }, slots.default?.() ?? [])
       },
     }),
   }
@@ -79,7 +114,10 @@ import {
   AppFooter,
   AppHeader,
   AppLogo,
+  AboutLogoImg,
+  AboutLogoList,
   BaseCard,
+  BlueskyPostEmbed,
   BuildEnvironment,
   ButtonBase,
   LinkBase,
@@ -88,6 +126,7 @@ import {
   CodeFileTree,
   CodeMobileTreeDrawer,
   CodeViewer,
+  CopyToClipboardButton,
   CollapsibleSection,
   ColumnPicker,
   CompareComparisonGrid,
@@ -104,6 +143,7 @@ import {
   HeaderAccountMenu,
   HeaderConnectorModal,
   HeaderSearchBox,
+  InputBase,
   LicenseDisplay,
   LoadingSpinner,
   PackageProvenanceSection,
@@ -138,7 +178,10 @@ import {
   ProvenanceBadge,
   Readme,
   ReadmeTocDropdown,
+  SearchProviderToggle,
   SearchSuggestionCard,
+  SelectBase,
+  SelectField,
   SettingsAccentColorPicker,
   SettingsBgThemePicker,
   SettingsToggle,
@@ -156,9 +199,11 @@ import {
 
 // Server variant components must be imported directly to test the server-side render
 // The #components import automatically provides the client variant
+import LogoNuxt from '~/assets/logos/oss-partners/nuxt.svg'
 import HeaderAccountMenuServer from '~/components/Header/AccountMenu.server.vue'
 import ToggleServer from '~/components/Settings/Toggle.server.vue'
-import PackageDownloadAnalytics from '~/components/Package/DownloadAnalytics.vue'
+import SearchProviderToggleServer from '~/components/SearchProviderToggle.server.vue'
+import PackageTrendsChart from '~/components/Package/TrendsChart.vue'
 
 describe('component accessibility audits', () => {
   describe('DateTime', () => {
@@ -256,6 +301,88 @@ describe('component accessibility audits', () => {
     it('should have no accessibility violations with custom class', async () => {
       const component = await mountSuspended(AppLogo, {
         props: { class: 'h-6 w-6 text-accent' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('AboutLogoImg', () => {
+    it('should have no accessibility violations with string src', async () => {
+      const component = await mountSuspended(AboutLogoImg, {
+        props: {
+          src: LogoNuxt,
+          alt: 'Nuxt logo',
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with dark/light src', async () => {
+      const component = await mountSuspended(AboutLogoImg, {
+        props: {
+          src: {
+            dark: LogoNuxt,
+            light: 'auto',
+          },
+          alt: 'Nuxt logo',
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('AboutLogoList', () => {
+    it('should have no accessibility violations with direct logo items', async () => {
+      const component = await mountSuspended(AboutLogoList, {
+        props: {
+          list: [
+            {
+              name: 'Nuxt',
+              url: 'https://nuxt.com',
+              logo: LogoNuxt,
+            },
+            {
+              name: 'Nuxt',
+              url: 'https://nuxt.com',
+              logo: {
+                dark: LogoNuxt,
+                light: 'auto',
+              },
+            },
+          ],
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with grouped items', async () => {
+      const component = await mountSuspended(AboutLogoList, {
+        props: {
+          list: [
+            {
+              name: 'OSS Partners',
+              items: [
+                {
+                  name: 'Nuxt',
+                  url: 'https://nuxt.com',
+                  logo: LogoNuxt,
+                },
+                {
+                  name: 'Nuxt',
+                  url: 'https://nuxt.com',
+                  logo: {
+                    dark: LogoNuxt,
+                    light: 'auto',
+                  },
+                },
+              ],
+            },
+          ],
+        },
       })
       const results = await runAxe(component)
       expect(results.violations).toEqual([])
@@ -554,8 +681,8 @@ describe('component accessibility audits', () => {
   describe('PackageChartModal', () => {
     it('should have no accessibility violations when closed', async () => {
       const component = await mountSuspended(PackageChartModal, {
-        props: { open: false },
-        slots: { title: 'Downloads', default: '<div>Chart content</div>' },
+        props: { open: false, title: 'Downloads' },
+        slots: { default: '<div>Chart content</div>' },
       })
       const results = await runAxe(component)
       expect(results.violations).toEqual([])
@@ -567,10 +694,10 @@ describe('component accessibility audits', () => {
     // inherently provided by the native <dialog> element with aria-labelledby.
   })
 
-  describe('PackageDownloadAnalytics', () => {
+  describe('PackageTrendsChart', () => {
     const mockWeeklyDownloads = [
       {
-        downloads: 1000,
+        value: 1000,
         weekKey: '2024-W01',
         weekStart: '2024-01-01',
         weekEnd: '2024-01-07',
@@ -578,7 +705,7 @@ describe('component accessibility audits', () => {
         timestampEnd: 1704585600,
       },
       {
-        downloads: 1200,
+        value: 1200,
         weekKey: '2024-W02',
         weekStart: '2024-01-08',
         weekEnd: '2024-01-14',
@@ -586,7 +713,7 @@ describe('component accessibility audits', () => {
         timestampEnd: 1705190400,
       },
       {
-        downloads: 1500,
+        value: 1500,
         weekKey: '2024-W03',
         weekStart: '2024-01-15',
         weekEnd: '2024-01-21',
@@ -596,7 +723,7 @@ describe('component accessibility audits', () => {
     ]
 
     it('should have no accessibility violations (non-modal)', async () => {
-      const wrapper = await mountSuspended(PackageDownloadAnalytics, {
+      const wrapper = await mountSuspended(PackageTrendsChart, {
         props: {
           weeklyDownloads: mockWeeklyDownloads,
           packageName: 'vue',
@@ -610,7 +737,7 @@ describe('component accessibility audits', () => {
     })
 
     it('should have no accessibility violations with empty data', async () => {
-      const wrapper = await mountSuspended(PackageDownloadAnalytics, {
+      const wrapper = await mountSuspended(PackageTrendsChart, {
         props: {
           weeklyDownloads: [],
           packageName: 'vue',
@@ -881,7 +1008,9 @@ describe('component accessibility audits', () => {
           tree: mockTree,
           currentPath: '',
           baseUrl: '/package-code/vue',
-          basePath: ['vue', 'v', '3.0.0'],
+          baseRoute: {
+            params: { packageName: 'vue', version: '3.0.0', filePath: '' },
+          },
         },
       })
       const results = await runAxe(component)
@@ -894,7 +1023,9 @@ describe('component accessibility audits', () => {
           tree: mockTree,
           currentPath: 'src',
           baseUrl: '/package-code/vue',
-          basePath: ['vue', 'v', '3.0.0'],
+          baseRoute: {
+            params: { packageName: 'vue', version: '3.0.0', filePath: '' },
+          },
         },
       })
       const results = await runAxe(component)
@@ -919,7 +1050,9 @@ describe('component accessibility audits', () => {
           tree: mockTree,
           currentPath: '',
           baseUrl: '/package-code/vue',
-          basePath: ['vue', 'v', '3.0.0'],
+          baseRoute: {
+            params: { packageName: 'vue', version: '3.0.0', filePath: '' },
+          },
         },
       })
       const results = await runAxe(component)
@@ -932,7 +1065,9 @@ describe('component accessibility audits', () => {
           tree: mockTree,
           currentPath: 'src/index.ts',
           baseUrl: '/package-code/vue',
-          basePath: ['vue', 'v', '3.0.0'],
+          baseRoute: {
+            params: { packageName: 'vue', version: '3.0.0', filePath: '' },
+          },
         },
       })
       const results = await runAxe(component)
@@ -979,6 +1114,8 @@ describe('component accessibility audits', () => {
       const component = await mountSuspended(PackageClaimPackageModal, {
         props: {
           packageName: 'test-package',
+          packageScope: undefined,
+          canPublishToScope: true,
           open: false,
         },
       })
@@ -990,6 +1127,8 @@ describe('component accessibility audits', () => {
       const component = await mountSuspended(PackageClaimPackageModal, {
         props: {
           packageName: 'test-package',
+          packageScope: undefined,
+          canPublishToScope: true,
           open: true,
         },
       })
@@ -1182,7 +1321,9 @@ describe('component accessibility audits', () => {
           tree: mockTree,
           currentPath: '',
           baseUrl: '/package-code/vue',
-          basePath: ['vue', 'v', '3.0.0'],
+          baseRoute: {
+            params: { packageName: 'vue', version: '3.0.0', filePath: '' },
+          },
         },
       })
       const results = await runAxe(component)
@@ -1569,8 +1710,8 @@ describe('component accessibility audits', () => {
         props: { packages: [] },
         global: {
           stubs: {
-            DownloadAnalytics: {
-              template: '<div data-test-id="download-analytics-stub"></div>',
+            TrendsChart: {
+              template: '<div data-test-id="trends-chart-stub"></div>',
             },
           },
         },
@@ -1584,8 +1725,8 @@ describe('component accessibility audits', () => {
         props: { packages: ['vue', 'react'] },
         global: {
           stubs: {
-            DownloadAnalytics: {
-              template: '<div data-test-id="download-analytics-stub"></div>',
+            TrendsChart: {
+              template: '<div data-test-id="trends-chart-stub"></div>',
             },
           },
         },
@@ -1844,6 +1985,26 @@ describe('component accessibility audits', () => {
     })
   })
 
+  describe('CopyToClipboardButton', () => {
+    it('should have no accessibility violations in default state', async () => {
+      const component = await mountSuspended(CopyToClipboardButton, {
+        props: { copied: false },
+        slots: { default: '<code>npm install vue</code>' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations in copied state', async () => {
+      const component = await mountSuspended(CopyToClipboardButton, {
+        props: { copied: true },
+        slots: { default: '<code>npm install vue</code>' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
   describe('CollapsibleSection', () => {
     it('should have no accessibility violations', async () => {
       const component = await mountSuspended(CollapsibleSection, {
@@ -1955,6 +2116,7 @@ describe('component accessibility audits', () => {
       const component = await mountSuspended(PackageInstallScripts, {
         props: {
           packageName: 'esbuild',
+          version: '0.25.0',
           installScripts: {
             scripts: ['postinstall'],
             content: { postinstall: 'node install.js' },
@@ -1970,6 +2132,7 @@ describe('component accessibility audits', () => {
       const component = await mountSuspended(PackageInstallScripts, {
         props: {
           packageName: 'husky',
+          version: '9.1.0',
           installScripts: {
             scripts: ['postinstall'],
             content: { postinstall: 'husky install' },
@@ -2139,6 +2302,149 @@ describe('component accessibility audits', () => {
     })
   })
 
+  describe('InputBase', () => {
+    it('should have no accessibility violations (with aria-label)', async () => {
+      const component = await mountSuspended(InputBase, {
+        attrs: { 'aria-label': 'Search input' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with placeholder', async () => {
+      const component = await mountSuspended(InputBase, {
+        attrs: { 'placeholder': 'Search...', 'aria-label': 'Search' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations when disabled', async () => {
+      const component = await mountSuspended(InputBase, {
+        attrs: { 'disabled': '', 'aria-label': 'Disabled input' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with size small', async () => {
+      const component = await mountSuspended(InputBase, {
+        props: { size: 'small' },
+        attrs: { 'aria-label': 'Small input' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with size large', async () => {
+      const component = await mountSuspended(InputBase, {
+        props: { size: 'large' },
+        attrs: { 'aria-label': 'Large input' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with noCorrect false', async () => {
+      const component = await mountSuspended(InputBase, {
+        props: { noCorrect: false },
+        attrs: { 'aria-label': 'Input with corrections' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('SelectBase', () => {
+    it('should have no accessibility violations with options and aria-label', async () => {
+      const component = await mountSuspended(SelectBase, {
+        attrs: { 'aria-label': 'Choose option' },
+        slots: {
+          default:
+            '<option value="option1">option 1</option><option value="option2">option 2</option>',
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations when disabled', async () => {
+      const component = await mountSuspended(SelectBase, {
+        props: { disabled: true },
+        attrs: { 'aria-label': 'Disabled select' },
+        slots: { default: '<option value="option1">option 1</option>' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with size small', async () => {
+      const component = await mountSuspended(SelectBase, {
+        props: { size: 'sm' },
+        attrs: { 'aria-label': 'Small select' },
+        slots: { default: '<option value="option1">option 1</option>' },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('SelectField', () => {
+    it('should have no accessibility violations with label and items', async () => {
+      const component = await mountSuspended(SelectField, {
+        props: {
+          id: 'a11y-select-1',
+          label: 'Choose one',
+          items: [
+            { label: 'Option 1', value: 'option1' },
+            { label: 'Option 2', value: 'option2' },
+          ],
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with hiddenLabel', async () => {
+      const component = await mountSuspended(SelectField, {
+        props: {
+          id: 'a11y-select-2',
+          label: 'Hidden',
+          hiddenLabel: true,
+          items: [{ label: 'Option 1', value: 'option1' }],
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations when disabled', async () => {
+      const component = await mountSuspended(SelectField, {
+        props: {
+          id: 'a11y-select-3',
+          selectAttrs: { 'aria-label': 'Disabled select' },
+          items: [{ label: 'Option 1', value: 'option1' }],
+          disabled: true,
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+
+    it('should have no accessibility violations with size small', async () => {
+      const component = await mountSuspended(SelectField, {
+        props: {
+          id: 'a11y-select-4',
+          selectAttrs: { 'aria-label': 'Disabled select' },
+          items: [{ label: 'Option 1', value: 'option1' }],
+          size: 'sm',
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
   describe('SearchSuggestionCard', () => {
     it('should have no accessibility violations for user suggestion', async () => {
       const component = await mountSuspended(SearchSuggestionCard, {
@@ -2160,6 +2466,22 @@ describe('component accessibility audits', () => {
       const component = await mountSuspended(SearchSuggestionCard, {
         props: { type: 'user', name: 'exactuser', isExactMatch: true },
       })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('SearchProviderToggle', () => {
+    it('should have no accessibility violations', async () => {
+      const component = await mountSuspended(SearchProviderToggle)
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('SearchProviderToggle.server', () => {
+    it('should have no accessibility violations', async () => {
+      const component = await mountSuspended(SearchProviderToggleServer)
       const results = await runAxe(component)
       expect(results.violations).toEqual([])
     })
@@ -2189,7 +2511,7 @@ describe('component accessibility audits', () => {
   describe('Toggle', () => {
     it('should have no accessibility violations', async () => {
       const component = await mountSuspended(SettingsToggle, {
-        props: { label: 'Enable feature' },
+        props: { label: 'Enable feature', modelValue: false },
       })
       const results = await runAxe(component)
       expect(results.violations).toEqual([])
@@ -2200,6 +2522,7 @@ describe('component accessibility audits', () => {
         props: {
           label: 'Enable feature',
           description: 'This enables the feature',
+          modelValue: false,
         },
       })
       const results = await runAxe(component)
@@ -2248,6 +2571,18 @@ describe('component accessibility audits', () => {
           versions: mockVersions,
           distTags: mockDistTags,
           urlPattern: '/package/vue/v/{version}',
+        },
+      })
+      const results = await runAxe(component)
+      expect(results.violations).toEqual([])
+    })
+  })
+
+  describe('BlueskyPostEmbed', () => {
+    it('should have no accessibility violations in pending state', async () => {
+      const component = await mountSuspended(BlueskyPostEmbed, {
+        props: {
+          uri: 'at://did:plc:u5zp7npt5kpueado77kuihyz/app.bsky.feed.post/3mejzn5mrcc2g',
         },
       })
       const results = await runAxe(component)
@@ -2337,7 +2672,7 @@ describe('background theme accessibility', () => {
       name: 'SettingsToggle',
       mount: () =>
         mountSuspended(SettingsToggle, {
-          props: { label: 'Feature', description: 'Desc' },
+          props: { label: 'Feature', description: 'Desc', modelValue: false },
         }),
     },
     {

@@ -484,7 +484,7 @@ watch(
         latest
       </span>
       <span
-        class="i-carbon:chevron-down w-3.5 h-3.5 transition-[transform] duration-200 motion-reduce:transition-none"
+        class="i-lucide:chevron-down w-3.5 h-3.5 transition-[transform] duration-200 motion-reduce:transition-none"
         :class="{ 'rotate-180': isOpen }"
         aria-hidden="true"
       />
@@ -520,7 +520,7 @@ watch(
               flatItems[focusedIndex]?.groupId === group.id &&
               flatItems[focusedIndex]?.type === 'group'
             "
-            class="flex items-center gap-2 px-3 py-2 text-sm font-mono hover:bg-bg-muted transition-[color,background-color] focus-visible:outline-none cursor-pointer"
+            class="flex items-center gap-2 px-3 py-2 text-sm font-mono hover:bg-bg-muted transition-[color,background-color] focus-visible:outline-none"
             :class="[
               group.primaryVersion.isCurrent ? 'text-fg bg-bg-muted' : 'text-fg-muted',
               flatItems[focusedIndex]?.groupId === group.id &&
@@ -540,13 +540,13 @@ watch(
             >
               <span
                 v-if="group.isLoading"
-                class="i-carbon:rotate-180 w-3 h-3 motion-safe:animate-spin"
+                class="i-svg-spinners:ring-resize w-3 h-3"
                 aria-hidden="true"
               />
               <span
                 v-else
                 class="w-3 h-3 transition-transform duration-200 rtl-flip"
-                :class="group.isExpanded ? 'i-carbon:chevron-down' : 'i-carbon:chevron-right'"
+                :class="group.isExpanded ? 'i-lucide:chevron-down' : 'i-lucide:chevron-right'"
                 aria-hidden="true"
               />
             </button>

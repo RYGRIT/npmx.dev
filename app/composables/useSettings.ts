@@ -8,6 +8,9 @@ type BackgroundThemeId = keyof typeof BACKGROUND_THEMES
 
 type AccentColorId = keyof typeof ACCENT_COLORS.light
 
+/** Available search providers */
+export type SearchProvider = 'npm' | 'algolia'
+
 /**
  * Application settings stored in localStorage
  */
@@ -24,8 +27,16 @@ export interface AppSettings {
   hidePlatformPackages: boolean
   /** User-selected locale */
   selectedLocale: LocaleObject['code'] | null
+  /** Search provider for package search */
+  searchProvider: SearchProvider
+  /** Connector preferences */
+  connector: {
+    /** Automatically open the web auth page in the browser */
+    autoOpenURL: boolean
+  }
   sidebar: {
     collapsed: string[]
+    animateSparkline: boolean
   }
 }
 
@@ -36,8 +47,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   hidePlatformPackages: true,
   selectedLocale: null,
   preferredBackgroundTheme: null,
+  searchProvider: import.meta.test ? 'npm' : 'algolia',
+  connector: {
+    autoOpenURL: false,
+  },
   sidebar: {
     collapsed: [],
+    animateSparkline: true,
   },
 }
 
@@ -102,6 +118,32 @@ export function useAccentColor() {
     accentColors,
     selectedAccentColor: computed(() => settings.value.accentColorId),
     setAccentColor,
+  }
+}
+
+/**
+ * Composable for managing the search provider setting.
+ */
+export function useSearchProvider() {
+  const { settings } = useSettings()
+
+  const searchProvider = computed({
+    get: () => settings.value.searchProvider,
+    set: (value: SearchProvider) => {
+      settings.value.searchProvider = value
+    },
+  })
+
+  const isAlgolia = computed(() => searchProvider.value === 'algolia')
+
+  function toggle() {
+    searchProvider.value = searchProvider.value === 'npm' ? 'algolia' : 'npm'
+  }
+
+  return {
+    searchProvider,
+    isAlgolia,
+    toggle,
   }
 }
 

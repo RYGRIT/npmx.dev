@@ -119,7 +119,7 @@ function getColumnLabel(id: ColumnId): string {
             scope="col"
             class="py-3 px-3 text-xs text-start text-fg-muted font-mono font-medium uppercase tracking-wider whitespace-nowrap select-none focus-visible:ring-2 focus-visible:ring-fg focus-visible:ring-inset focus-visible:outline-none"
             :class="{
-              'cursor-pointer hover:text-fg transition-colors duration-200': isSortable('name'),
+              'hover:text-fg transition-colors duration-200': isSortable('name'),
             }"
             :aria-sort="
               isColumnSorted('name')
@@ -139,11 +139,15 @@ function getColumnLabel(id: ColumnId): string {
               <template v-if="isSortable('name')">
                 <span
                   v-if="isColumnSorted('name')"
-                  class="i-carbon-caret-down w-3 h-3"
+                  class="i-lucide:chevron-down w-3 h-3"
                   :class="getSortDirection('name') === 'asc' ? 'rotate-180' : ''"
                   aria-hidden="true"
                 />
-                <span v-else class="i-carbon-caret-sort w-3 h-3 opacity-30" aria-hidden="true" />
+                <span
+                  v-else
+                  class="i-lucide:chevrons-up-down w-3 h-3 opacity-30"
+                  aria-hidden="true"
+                />
               </template>
             </span>
           </th>
@@ -169,8 +173,7 @@ function getColumnLabel(id: ColumnId): string {
             scope="col"
             class="py-3 px-3 text-xs text-start text-fg-muted font-mono font-medium uppercase tracking-wider whitespace-nowrap select-none text-end focus-visible:ring-2 focus-visible:ring-fg focus-visible:ring-inset focus-visible:outline-none"
             :class="{
-              'cursor-pointer hover:text-fg transition-colors duration-200':
-                isSortable('downloads'),
+              'hover:text-fg transition-colors duration-200': isSortable('downloads'),
             }"
             :aria-sort="
               isColumnSorted('downloads')
@@ -190,11 +193,15 @@ function getColumnLabel(id: ColumnId): string {
               <template v-if="isSortable('downloads')">
                 <span
                   v-if="isColumnSorted('downloads')"
-                  class="i-carbon-caret-down w-3 h-3"
+                  class="i-lucide:chevron-down w-3 h-3"
                   :class="getSortDirection('downloads') === 'asc' ? 'rotate-180' : ''"
                   aria-hidden="true"
                 />
-                <span v-else class="i-carbon-caret-sort w-3 h-3 opacity-30" aria-hidden="true" />
+                <span
+                  v-else
+                  class="i-lucide:chevrons-up-down w-3 h-3 opacity-30"
+                  aria-hidden="true"
+                />
               </template>
             </span>
           </th>
@@ -204,7 +211,7 @@ function getColumnLabel(id: ColumnId): string {
             scope="col"
             class="py-3 px-3 text-xs text-start text-fg-muted font-mono font-medium uppercase tracking-wider whitespace-nowrap select-none text-end focus-visible:ring-2 focus-visible:ring-fg focus-visible:ring-inset focus-visible:outline-none"
             :class="{
-              'cursor-pointer hover:text-fg transition-colors duration-200': isSortable('updated'),
+              'hover:text-fg transition-colors duration-200': isSortable('updated'),
             }"
             :aria-sort="
               isColumnSorted('updated')
@@ -224,11 +231,15 @@ function getColumnLabel(id: ColumnId): string {
               <template v-if="isSortable('updated')">
                 <span
                   v-if="isColumnSorted('updated')"
-                  class="i-carbon-caret-down w-3 h-3"
+                  class="i-lucide:chevron-down w-3 h-3"
                   :class="getSortDirection('updated') === 'asc' ? 'rotate-180' : ''"
                   aria-hidden="true"
                 />
-                <span v-else class="i-carbon-caret-sort w-3 h-3 opacity-30" aria-hidden="true" />
+                <span
+                  v-else
+                  class="i-lucide:chevrons-up-down w-3 h-3 opacity-30"
+                  aria-hidden="true"
+                />
               </template>
             </span>
           </th>
