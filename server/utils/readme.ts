@@ -266,6 +266,16 @@ const reservedPathsNpmJs = [
 
 const npmJsHosts = new Set(['www.npmjs.com', 'npmjs.com', 'www.npmjs.org', 'npmjs.org'])
 
+const USER_CONTENT_PREFIX = 'user-content-'
+
+function withUserContentPrefix(value: string): string {
+  return value.startsWith(USER_CONTENT_PREFIX) ? value : `${USER_CONTENT_PREFIX}${value}`
+}
+
+function toUserContentHash(value: string): string {
+  return `#${withUserContentPrefix(value)}`
+}
+
 const isNpmJsUrlThatCanBeRedirected = (url: URL) => {
   if (!npmJsHosts.has(url.host)) {
     return false
@@ -292,8 +302,7 @@ function resolveUrl(url: string, packageName: string, repoInfo?: RepositoryInfo)
   if (url.startsWith('#')) {
     // Prefix anchor links to match heading IDs (avoids collision with page IDs)
     // Idempotent: don't double-prefix if already prefixed
-    if (url.startsWith('#user-content-')) return url
-    return `#user-content-${url.slice(1)}`
+    return toUserContentHash(url.slice(1))
   }
   // Absolute paths (e.g. /package/foo from a previous npmjs redirect) are already resolved
   if (url.startsWith('/')) return url
@@ -385,8 +394,8 @@ function resolveImageUrl(url: string, packageName: string, repoInfo?: Repository
 
 // Helper to prefix id attributes with 'user-content-'
 function prefixId(tagName: string, attribs: sanitizeHtml.Attributes) {
-  if (attribs.id && !attribs.id.startsWith('user-content-')) {
-    attribs.id = `user-content-${attribs.id}`
+  if (attribs.id) {
+    attribs.id = withUserContentPrefix(attribs.id)
   }
   return { tagName, attribs }
 }
@@ -437,7 +446,7 @@ export async function renderReadmeHtml(
     const count = usedSlugs.get(slug) ?? 0
     usedSlugs.set(slug, count + 1)
     const uniqueSlug = count === 0 ? slug : `${slug}-${count}`
-    const id = `user-content-${uniqueSlug}`
+    const id = withUserContentPrefix(uniqueSlug)
 
     if (plainText) {
       toc.push({ text: plainText, id, depth })
