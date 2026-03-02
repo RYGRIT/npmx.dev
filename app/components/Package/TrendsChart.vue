@@ -1614,9 +1614,9 @@ const chartConfig = computed<VueUiXyConfig>(() => {
 
           const hasMultipleItems = items.length > 1
 
-          // Format date for compare page (multi-package mode, not in modal)
+          // Format date for multiple series datasets
           let formattedDate = ''
-          if (!props.inModal && hasMultipleItems && absoluteIndex !== undefined) {
+          if (hasMultipleItems && absoluteIndex !== undefined) {
             const index = Number(absoluteIndex)
             if (Number.isInteger(index) && index >= 0 && index < chartData.value.dates.length) {
               const timestamp = chartData.value.dates[index]
