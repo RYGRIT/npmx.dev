@@ -306,9 +306,10 @@ function renderClassMembers(def: NonNullable<DenoDocNode['classDef']>): string {
       const modStr = modifiers.length > 0 ? `${modifiers.join(' ')} ` : ''
       const type = formatType(prop.tsType)
       const opt = prop.optional ? '?' : ''
+      const typeStr = type ? `: ${type}` : ''
 
       return {
-        signature: `${modStr}${prop.name}${opt}: ${type}`,
+        signature: `${modStr}${prop.name}${opt}${typeStr}`,
         description: prop.jsDoc?.doc,
       }
     })
