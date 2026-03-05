@@ -293,11 +293,32 @@ function renderClassMembers(def: NonNullable<DenoDocNode['classDef']>): string {
     lines.push(`</div>`)
   }
 
-  if (methods && methods.length > 0) {
+  const getters = methods?.filter(m => m.kind === 'getter') || []
+  const regularMethods = methods?.filter(m => m.kind !== 'getter') || []
+
+  if (getters.length > 0) {
+    lines.push(`<div class="docs-members">`)
+    lines.push(`<h4>Getters</h4>`)
+    lines.push(`<dl>`)
+    for (const getter of getters) {
+      const ret = formatType(getter.functionDef?.returnType) || 'unknown'
+      const staticStr = getter.isStatic ? 'static ' : ''
+      lines.push(
+        `<dt><code>${escapeHtml(staticStr)}get ${escapeHtml(getter.name)}: ${escapeHtml(ret)}</code></dt>`,
+      )
+      if (getter.jsDoc?.doc) {
+        lines.push(`<dd>${escapeHtml(getter.jsDoc.doc.split('\n')[0] ?? '')}</dd>`)
+      }
+    }
+    lines.push(`</dl>`)
+    lines.push(`</div>`)
+  }
+
+  if (regularMethods.length > 0) {
     lines.push(`<div class="docs-members">`)
     lines.push(`<h4>Methods</h4>`)
     lines.push(`<dl>`)
-    for (const method of methods) {
+    for (const method of regularMethods) {
       const params = method.functionDef?.params?.map(p => formatParam(p)).join(', ') || ''
       const ret = formatType(method.functionDef?.returnType) || 'void'
       const staticStr = method.isStatic ? 'static ' : ''
