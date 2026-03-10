@@ -592,6 +592,20 @@ describe('HTML output', () => {
     expect(result.html).toContain('align="center"')
   })
 
+  it('preserves inline code heading content and generates encoded slugs', async () => {
+    const markdown = ['### `<Text>`', '', '### `<Box>`'].join('\n')
+    const result = await renderReadmeHtml(markdown, 'test-pkg')
+
+    expect(result.toc).toHaveLength(2)
+    expect(result.toc[0]).toMatchObject({ text: '<Text>', id: 'user-content-lttextgt', depth: 3 })
+    expect(result.toc[1]).toMatchObject({ text: '<Box>', id: 'user-content-ltboxgt', depth: 3 })
+    expect(result.html).toContain('<code>&lt;Text&gt;</code>')
+    expect(result.html).toContain('<code>&lt;Box&gt;</code>')
+    expect(result.html).toContain('id="user-content-lttextgt"')
+    expect(result.html).toContain('id="user-content-ltboxgt"')
+    expect(result.html).not.toContain('user-content-heading')
+  })
+
   it('preserves supported attributes on rewritten raw HTML anchors (renderer.html path)', async () => {
     const md = [
       '<div>',
@@ -802,6 +816,28 @@ describe('Issue #1323 — single-pass rendering correctness', () => {
       // All IDs should be unique
       const ids = result.toc.map(t => t.id)
       expect(new Set(ids).size).toBe(ids.length)
+    })
+
+    it('keeps paragraphs and fenced code blocks when mixed with HTML headings', async () => {
+      const md = [
+        '<h2><code>&lt;Text&gt;</code></h2>',
+        '',
+        'Paragraph before code.',
+        '',
+        '```ts',
+        'const component = "Text"',
+        '```',
+        '',
+        'Paragraph after code.',
+      ].join('\n')
+
+      const result = await renderReadmeHtml(md, 'test-pkg')
+
+      expect(result.html).toContain('<code>&lt;Text&gt;</code>')
+      expect(result.html).toContain('<p>Paragraph before code.</p>')
+      expect(result.html).toContain('const component = "Text"')
+      expect(result.html).toContain('<p>Paragraph after code.</p>')
+      expect(result.html).toContain('id="user-content-lttextgt"')
     })
   })
 })

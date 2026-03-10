@@ -219,6 +219,14 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, '') // Trim leading/trailing hyphens
 }
 
+function getHeadingPlainText(text: string): string {
+  return decodeHtmlEntities(stripHtmlTags(text).trim())
+}
+
+function getHeadingSlugSource(text: string): string {
+  return stripHtmlTags(text).trim()
+}
+
 /**
  * Lazy ATX heading extension for marked: allows headings without a space after `#`.
  *
@@ -457,11 +465,17 @@ export async function renderReadmeHtml(
   let lastSemanticLevel = 2 // Start after h2 (the "Readme" section heading)
 
   // Shared heading processing for both markdown and HTML headings
-  function processHeading(depth: number, plainText: string, preservedAttrs = '') {
+  function processHeading(
+    depth: number,
+    displayHtml: string,
+    plainText: string,
+    slugSource: string,
+    preservedAttrs = '',
+  ) {
     const semanticLevel = calculateSemanticDepth(depth, lastSemanticLevel)
     lastSemanticLevel = semanticLevel
 
-    let slug = slugify(plainText)
+    let slug = slugify(slugSource)
     if (!slug) slug = 'heading'
 
     const count = usedSlugs.get(slug) ?? 0
@@ -473,13 +487,14 @@ export async function renderReadmeHtml(
       toc.push({ text: plainText, id, depth })
     }
 
-    return `<h${semanticLevel} id="${id}" data-level="${depth}"${preservedAttrs}><a href="#${id}">${plainText}</a></h${semanticLevel}>\n`
+    return `<h${semanticLevel} id="${id}" data-level="${depth}"${preservedAttrs}><a href="#${id}">${displayHtml}</a></h${semanticLevel}>\n`
   }
 
   renderer.heading = function ({ tokens, depth }: Tokens.Heading) {
-    const text = this.parser.parseInline(tokens)
-    const plainText = decodeHtmlEntities(stripHtmlTags(text).trim())
-    return processHeading(depth, plainText)
+    const displayHtml = this.parser.parseInline(tokens)
+    const plainText = getHeadingPlainText(displayHtml)
+    const slugSource = getHeadingSlugSource(displayHtml)
+    return processHeading(depth, displayHtml, plainText, slugSource)
   }
 
   // Intercept HTML headings so they get id, TOC entry, and correct semantic level.
@@ -489,10 +504,11 @@ export async function renderReadmeHtml(
   renderer.html = function ({ text }: Tokens.HTML) {
     let result = text.replace(htmlHeadingRe, (_, level, attrs = '', inner) => {
       const depth = parseInt(level)
-      const plainText = decodeHtmlEntities(stripHtmlTags(inner).trim())
+      const plainText = getHeadingPlainText(inner)
+      const slugSource = getHeadingSlugSource(inner)
       const align = /\balign=(["'])(.*?)\1/i.exec(attrs)?.[2]
       const preservedAttrs = align ? ` align="${align}"` : ''
-      return processHeading(depth, plainText, preservedAttrs).trimEnd()
+      return processHeading(depth, inner, plainText, slugSource, preservedAttrs).trimEnd()
     })
     // Process raw HTML <a> tags for playground link collection and URL resolution
     result = result.replace(htmlAnchorRe, (_full, beforeHref, _quote, href, afterHref, inner) => {
