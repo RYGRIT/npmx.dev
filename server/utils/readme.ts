@@ -497,6 +497,17 @@ export async function renderReadmeHtml(
     return processHeading(depth, displayHtml, plainText, slugSource)
   }
 
+  // Extract and preserve allowed attributes from HTML heading tags
+  function extractHeadingAttrs(attrsString: string): string {
+    if (!attrsString) return ''
+    const preserved: string[] = []
+    const alignMatch = /\balign=(["']?)([^"'\s>]+)\1/i.exec(attrsString)
+    if (alignMatch?.[2]) {
+      preserved.push(`align="${alignMatch[2]}"`)
+    }
+    return preserved.length > 0 ? ` ${preserved.join(' ')}` : ''
+  }
+
   // Intercept HTML headings so they get id, TOC entry, and correct semantic level.
   // Also intercept raw HTML <a> tags so playground links are collected in the same pass.
   const htmlHeadingRe = /<h([1-6])(\s[^>]*)?>([\s\S]*?)<\/h\1>/gi
@@ -506,8 +517,7 @@ export async function renderReadmeHtml(
       const depth = parseInt(level)
       const plainText = getHeadingPlainText(inner)
       const slugSource = getHeadingSlugSource(inner)
-      const align = /\balign=(["'])(.*?)\1/i.exec(attrs)?.[2]
-      const preservedAttrs = align ? ` align="${align}"` : ''
+      const preservedAttrs = extractHeadingAttrs(attrs)
       return processHeading(depth, inner, plainText, slugSource, preservedAttrs).trimEnd()
     })
     // Process raw HTML <a> tags for playground link collection and URL resolution
