@@ -210,7 +210,7 @@ const ALLOWED_ATTR: Record<string, string[]> = {
  * - Collapse multiple hyphens
  */
 function slugify(text: string): string {
-  return stripHtmlTags(text)
+  return decodeHtmlEntities(stripHtmlTags(text))
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-') // Spaces to hyphens
