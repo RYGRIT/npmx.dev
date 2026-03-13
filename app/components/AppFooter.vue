@@ -4,6 +4,7 @@ import { NPMX_DOCS_SITE } from '#shared/utils/constants'
 const route = useRoute()
 const isHome = computed(() => route.name === 'index')
 
+const discord = useDiscordLink()
 const modalRef = useTemplateRef('modalRef')
 const showModal = () => modalRef.value?.showModal?.()
 const closeModal = () => modalRef.value?.close?.()
@@ -87,12 +88,20 @@ const closeModal = () => modalRef.value?.close?.()
               </p>
               <ul class="mb-8 flex flex-col gap-2">
                 <li class="flex gap-2 items-center">
-                  <kbd class="kbd">.</kbd>
-                  <span>{{ $t('shortcuts.open_code_view') }}</span>
+                  <kbd class="kbd">m</kbd>
+                  <span>{{ $t('shortcuts.open_main') }}</span>
                 </li>
                 <li class="flex gap-2 items-center">
                   <kbd class="kbd">d</kbd>
                   <span>{{ $t('shortcuts.open_docs') }}</span>
+                </li>
+                <li class="flex gap-2 items-center">
+                  <kbd class="kbd">.</kbd>
+                  <span>{{ $t('shortcuts.open_code_view') }}</span>
+                </li>
+                <li class="flex gap-2 items-center">
+                  <kbd class="kbd">f</kbd>
+                  <span>{{ $t('shortcuts.open_diff') }}</span>
                 </li>
                 <li class="flex gap-2 items-center">
                   <kbd class="kbd">c</kbd>
@@ -124,16 +133,16 @@ const closeModal = () => modalRef.value?.close?.()
             <LinkBase to="https://social.npmx.dev">
               {{ $t('footer.social') }}
             </LinkBase>
-            <LinkBase to="https://chat.npmx.dev">
-              {{ $t('footer.chat') }}
+            <LinkBase :to="discord.url">
+              {{ discord.label }}
             </LinkBase>
           </div>
         </div>
       </div>
-      <p class="text-xs text-fg-muted text-center sm:text-start m-0">
+      <small class="text-xs text-fg-muted text-center sm:text-start m-0">
         <span class="sm:hidden">{{ $t('non_affiliation_disclaimer') }}</span>
         <span class="hidden sm:inline">{{ $t('trademark_disclaimer') }}</span>
-      </p>
+      </small>
     </div>
   </footer>
 </template>
