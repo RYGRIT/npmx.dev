@@ -8,6 +8,7 @@ import type { UserServerSession } from '#shared/types/userSession'
 import type { EventHandlerRequest, H3Event, SessionManager } from 'h3'
 import { JoseKey, Keyset, oauthRedirectUriSchema, webUriSchema } from '@atproto/oauth-client-node'
 import { NodeOAuthClient, AtprotoDohHandleResolver } from '@atproto/oauth-client-node'
+// @ts-expect-error virtual file from oauth module
 import { clientUri } from '#oauth/config'
 import { getOAuthLock } from '#server/utils/atproto/lock'
 import { useOAuthStorage } from '#server/utils/atproto/storage'

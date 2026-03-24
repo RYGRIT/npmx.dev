@@ -5,6 +5,7 @@ import { Client, isAtUriString } from '@atproto/lex'
 import { isAtIdentifierString } from '@atproto/lex'
 import { OAuthCallbackError } from '@atproto/oauth-client-node'
 import { createError, getQuery, sendRedirect, setCookie, getCookie, deleteCookie } from 'h3'
+// @ts-expect-error virtual file from oauth module
 import { clientUri } from '#oauth/config'
 import { scope } from '#server/utils/atproto/oauth'
 import { handleApiError } from '#server/utils/error-handler'

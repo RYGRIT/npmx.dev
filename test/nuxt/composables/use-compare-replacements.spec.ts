@@ -1,5 +1,5 @@
-import type { ReplacementSuggestion } from '~/composables/useCompareReplacements'
 import type { ModuleReplacement } from 'module-replacements'
+import type { ReplacementSuggestion } from '~/composables/useCompareReplacements'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
